@@ -1,93 +1,92 @@
 package com.github.dakusui.fruitjuice;
 
-import com.github.dakusui.fixture.Fixture;
 import com.google.common.base.Throwables;
-import com.google.inject.Inject;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.AbstractList;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 public interface InjectionPoint {
-	Provider<?> getProvider();
+  InjectionRequest getRequest();
 
-	InjectionRequest getRequest();
+  Object getOwner();
 
-	Object getOwner();
+  ValueFactory getValueFactory();
 
-	abstract class Base implements InjectionPoint {
-		@Override
-		public Provider<?> getProvider() {
-			try {
-				//noinspection ConstantConditions
-				return getAnnotatedAnnotation(RequestInjection.class).provider().newInstance();
-			} catch (InstantiationException | IllegalAccessException e) {
-				throw Throwables.propagate(e);
-			}
-		}
+  enum Factory {
+    ;
 
-		private <T extends Annotation> T getAnnotatedAnnotation(Class<T> annotation) {
-			for (Annotation each : this.getRequest().getAnnotations()) {
-				if (each.annotationType().isAnnotationPresent(annotation)) {
-					return each.annotationType().getAnnotation(annotation);
-				};
-			}
-			return null;
-		}
-	}
+    static InjectionPoint createFromField(final Field targetField) {
+      return new InjectionPoint() {
+        @Override
+        public InjectionRequest getRequest() {
+          return InjectionRequest.Factory.createFromField(targetField);
+        }
 
-	enum Factory {
-		;
+        @Override
+        public Object getOwner() {
+          return targetField;
+        }
 
-		static InjectionPoint createFromField(final Field targetField) {
-			return new InjectionPoint.Base() {
-				@Override
-				public InjectionRequest getRequest() {
-					return InjectionRequest.Factory.createFromField(targetField);
-				}
+        @Override
+        public ValueFactory getValueFactory() {
+          return createValueFactory(this);
+        }
+      };
+    }
 
-				@Override
-				public Object getOwner() {
-					return targetField;
-				}
-			};
-		}
+    public static Iterable<InjectionPoint> createInjectionPointsFromConstructor(final Constructor targetConstructor) {
+      return new AbstractList<InjectionPoint>() {
+        @Override
+        public InjectionPoint get(final int index) {
+          return new InjectionPoint() {
+            @Override
+            public InjectionRequest getRequest() {
+              return InjectionRequest.Factory.createFromParameter(
+                  targetConstructor.getParameterTypes()[index],
+                  targetConstructor.getParameterAnnotations()[index],
+                  String.format("p%d", index)
+              );
+            }
 
-		public static Iterable<InjectionPoint> createInjectionPointsFromConstructor(final Constructor targetConstructor) {
-			return new AbstractList<InjectionPoint>() {
-				@Override
-				public InjectionPoint get(final int index) {
-					return new InjectionPoint.Base() {
-						@Override
-						public InjectionRequest getRequest() {
-							return new InjectionRequest.Base(targetConstructor.getParameterAnnotations()[index]) {
-								@Override
-								public Class<?> getType() {
-									return targetConstructor.getParameterTypes()[index];
-								}
+            @Override
+            public Object getOwner() {
+              return targetConstructor;
+            }
 
-								@Override
-								public String getName() {
-									return String.format("p%d", index);
-								}
-							};
-						}
+            @Override
+            public ValueFactory getValueFactory() {
+              return createValueFactory(this);
+            }
+          };
+        }
 
-						@Override
-						public Object getOwner() {
-							return targetConstructor;
-						}
-					};
-				}
+        @Override
+        public int size() {
+          return targetConstructor.getParameterTypes().length;
+        }
+      };
 
-				@Override
-				public int size() {
-					return targetConstructor.getParameterTypes().length;
-				}
-			};
-		}
-	}
+    }
+
+    private static ValueFactory createValueFactory(InjectionPoint injectionPoint) {
+      try {
+        //noinspection ConstantConditions
+        return (ValueFactory) getAnnotatedAnnotation(injectionPoint, RequestInjection.class).value().newInstance().create(injectionPoint.getRequest());
+      } catch (InstantiationException | IllegalAccessException e) {
+        throw Throwables.propagate(e);
+      }
+    }
+
+    private static <T extends Annotation> T getAnnotatedAnnotation(InjectionPoint injectionPoint, Class<T> annotation) {
+      for (Annotation each : injectionPoint.getRequest().getAnnotations()) {
+        if (each.annotationType().isAnnotationPresent(annotation)) {
+          return each.annotationType().getAnnotation(annotation);
+        }
+      }
+      return null;
+    }
+
+  }
 }
