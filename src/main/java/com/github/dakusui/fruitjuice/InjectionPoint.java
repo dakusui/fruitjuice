@@ -1,93 +1,79 @@
 package com.github.dakusui.fruitjuice;
 
-import com.github.dakusui.fixture.Fixture;
-import com.google.common.base.Throwables;
-import com.google.inject.Inject;
-
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.AbstractList;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
+/**
+ * An interface that represents a point at which a dependency injection by the
+ * FruitJuice framework happens.
+ *
+ * @see Factory
+ */
 public interface InjectionPoint {
-	Provider<?> getProvider();
+  /**
+   * Returns an {@code InjectionRequest} object.
+   *
+   * @see InjectionRequest
+   */
+  InjectionRequest getRequest();
 
-	InjectionRequest getRequest();
+  /**
+   * Returns an owner from which this object is created.
+   */
+  Object getOwner();
 
-	Object getOwner();
+  /**
+   * A factory class that creates {@code InjectionPoint} objects.
+   */
+  enum Factory {
+    ;
 
-	abstract class Base implements InjectionPoint {
-		@Override
-		public Provider<?> getProvider() {
-			try {
-				//noinspection ConstantConditions
-				return getAnnotatedAnnotation(RequestInjection.class).provider().newInstance();
-			} catch (InstantiationException | IllegalAccessException e) {
-				throw Throwables.propagate(e);
-			}
-		}
+    /**
+     * Creates an {@code InjectionPoint} object from a field of a class.
+     */
+    public static InjectionPoint createFromField(final Field targetField) {
+      return new InjectionPoint() {
+        @Override
+        public InjectionRequest getRequest() {
+          return InjectionRequest.Factory.createFromField(targetField);
+        }
 
-		private <T extends Annotation> T getAnnotatedAnnotation(Class<T> annotation) {
-			for (Annotation each : this.getRequest().getAnnotations()) {
-				if (each.annotationType().isAnnotationPresent(annotation)) {
-					return each.annotationType().getAnnotation(annotation);
-				};
-			}
-			return null;
-		}
-	}
+        @Override
+        public Object getOwner() {
+          return targetField;
+        }
+      };
+    }
 
-	enum Factory {
-		;
+    /**
+     * Creates {@code InjectionPoint} objects from a constructor of a class.
+     */
+    public static Iterable<InjectionPoint> createInjectionPointsFromConstructor(final Constructor targetConstructor) {
+      return new AbstractList<InjectionPoint>() {
+        @Override
+        public InjectionPoint get(final int index) {
+          return new InjectionPoint() {
+            @Override
+            public InjectionRequest getRequest() {
+              return InjectionRequest.Factory.createFromConstructorParameter(
+                  targetConstructor,
+                  index);
+            }
 
-		static InjectionPoint createFromField(final Field targetField) {
-			return new InjectionPoint.Base() {
-				@Override
-				public InjectionRequest getRequest() {
-					return InjectionRequest.Factory.createFromField(targetField);
-				}
+            @Override
+            public Object getOwner() {
+              return targetConstructor;
+            }
 
-				@Override
-				public Object getOwner() {
-					return targetField;
-				}
-			};
-		}
+          };
+        }
 
-		public static Iterable<InjectionPoint> createInjectionPointsFromConstructor(final Constructor targetConstructor) {
-			return new AbstractList<InjectionPoint>() {
-				@Override
-				public InjectionPoint get(final int index) {
-					return new InjectionPoint.Base() {
-						@Override
-						public InjectionRequest getRequest() {
-							return new InjectionRequest.Base(targetConstructor.getParameterAnnotations()[index]) {
-								@Override
-								public Class<?> getType() {
-									return targetConstructor.getParameterTypes()[index];
-								}
-
-								@Override
-								public String getName() {
-									return String.format("p%d", index);
-								}
-							};
-						}
-
-						@Override
-						public Object getOwner() {
-							return targetConstructor;
-						}
-					};
-				}
-
-				@Override
-				public int size() {
-					return targetConstructor.getParameterTypes().length;
-				}
-			};
-		}
-	}
+        @Override
+        public int size() {
+          return targetConstructor.getParameterTypes().length;
+        }
+      };
+    }
+  }
 }
