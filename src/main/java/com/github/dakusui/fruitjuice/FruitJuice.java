@@ -6,7 +6,8 @@ package com.github.dakusui.fruitjuice;
  * FruitJuice.createInjector(new Context.Builder() {
  *   Map<InjectionRequest, Object> registry = new HashMap<>();
  *
- *   @Override public Context.Builder add(InjectionPoint injectionPoint) {
+ *   {@literal @}Override
+ *   public Context.Builder add(InjectionPoint injectionPoint) {
  *     registry.put(
  *       injectionPoint.getRequest(),
  *       injectionPoint.getValueFactory().create(injectionPoint.getRequest())
@@ -14,17 +15,16 @@ package com.github.dakusui.fruitjuice;
  *     return this;
  *   }
  *
- *   @Override
+ *   {@literal @}Override
  *   public Context build() {
  *     return new Context() {
- *       @Override
+ *       {@literal @}Override
  *       public <V> V lookup(InjectionRequest request) {
- *         //noinspection unchecked
  *         return (V) registry.get(request);
  *       }
  *    };
  *   }
- * }).getInstance(checkNotNull(fixtureClass));
+ * }).getInstance(fixtureClass);
  * </code>
  */
 public enum FruitJuice {
