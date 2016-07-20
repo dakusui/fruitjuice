@@ -38,18 +38,13 @@ public interface InjectionRequest {
   Iterable<Annotation> getAnnotations();
 
   /**
-   * Returns an annotation object whose annotation type is annotated with {@code RequestInjection}.
-   */
-  <A extends Annotation> A getPrimaryAnnotation();
-
-  /**
    * A base class of a {@code InjectionRequest}. Implementations of this interface is
    * created by {@code Factory}.
    *
    * @see Factory
    */
   abstract class Base implements InjectionRequest {
-    private final Iterable<Annotation> annotations;
+    final Iterable<Annotation> annotations;
 
     /**
      * Creates an object of this class.
@@ -58,35 +53,6 @@ public interface InjectionRequest {
      */
     protected Base(Annotation[] annotations) {
       this.annotations = Arrays.asList(annotations);
-      int numFound;
-      Preconditions.checkState(1 == (numFound = size(filter(
-          this.annotations,
-          new Predicate<Annotation>() {
-            @Override
-            public boolean apply(Annotation annotation) {
-              return annotation.annotationType().isAnnotationPresent(RequestInjection.class);
-            }
-          }))),
-          "There must be 1 and only 1 annotation annotated with '%s' (%s found)",
-          RequestInjection.class.getSimpleName(),
-          numFound
-      );
-    }
-
-    /**
-     * There should be one and only one such annotation in {@code annotations} of
-     * this object.
-     * Because {@code annotations} should be validated on instantiation.
-     */
-    @Override
-    public <A extends Annotation> A getPrimaryAnnotation() {
-      //noinspection unchecked
-      return (A) find(this.annotations, new Predicate<Annotation>() {
-        @Override
-        public boolean apply(Annotation annotation) {
-          return annotation.annotationType().isAnnotationPresent(RequestInjection.class);
-        }
-      });
     }
 
     @Override
@@ -132,9 +98,11 @@ public interface InjectionRequest {
     public int hashCode() {
       return this.getType().hashCode();
     }
-
   }
 
+  /**
+   * A factory class to create {@code InjectionRequest} objects.
+   */
   enum Factory {
     ;
 
@@ -145,6 +113,17 @@ public interface InjectionRequest {
           @Override
           public Class<?> getType() {
             return field.getType();
+          }
+
+          @Override
+          public String toString() {
+            return format(
+                "%s:%s#%s %s",
+                getType().getSimpleName(),
+                field.getDeclaringClass().getSimpleName(),
+                field.getName(),
+                Iterables.toString(this.annotations)
+            );
           }
         };
       } catch (RuntimeException e) {
@@ -160,30 +139,35 @@ public interface InjectionRequest {
           e.getMessage());
     }
 
-    static InjectionRequest createFromConstructorParameter(Constructor<?> constructor, int index) {
+    static InjectionRequest createFromConstructorParameter(final Constructor<?> constructor, final int index) {
       try {
-        return createFromConstructorParameter(
-            constructor.getDeclaringClass(),
-            constructor.getParameterAnnotations()[index]
-        );
+        return new InjectionRequest.Base(constructor.getParameterAnnotations()[index]) {
+          @Override
+          public Class<?> getType() {
+            return constructor.getParameterTypes()[index];
+          }
+
+          @Override
+          public String toString() {
+            return format(
+                "%s:%s#<<init>>[%s] %s",
+                getType().getSimpleName(),
+                constructor.getDeclaringClass().getSimpleName(),
+                index,
+                Iterables.toString(this.annotations)
+            );
+          }
+
+        };
       } catch (RuntimeException e) {
         throw new RuntimeException(composeErrorMessageWhenCreationFromConstructorParameterFail(constructor, index, e), e);
       }
     }
 
-    private static InjectionRequest createFromConstructorParameter(final Class parameterType, Annotation[] annotations) {
-      return new InjectionRequest.Base(annotations) {
-        @Override
-        public Class<?> getType() {
-          return parameterType;
-        }
-      };
-    }
-
     private static String composeErrorMessageWhenCreationFromConstructorParameterFail(Constructor<?> constructor, int index, RuntimeException e) {
       return format(
           "Failed to create an injection request for constructor (annotated with '%s') parameter %s in %s: %s",
-          UseForInjection.class.getSimpleName(),
+          Inject.class.getSimpleName(),
           index,
           constructor.getDeclaringClass().getCanonicalName(),
           e.getMessage()
