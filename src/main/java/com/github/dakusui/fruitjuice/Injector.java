@@ -7,12 +7,18 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Collections;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.Iterables.*;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 
+/**
+ * The injector of the FruitJuice framework.
+ *
+ */
 public interface Injector {
   <T> T getInstance(Class<T> targetClass);
 
@@ -97,7 +103,7 @@ public interface Injector {
     private <T> Constructor<T> makeSureAllParametersRequestInjection(Constructor<T> tConstructor) {
       checkArgument(isEmpty(filter(
           asList(tConstructor.getParameterAnnotations()),
-          Predicates.not(Utils.HAS_ONLY_ONE_REQUEST_INJECTION))),
+          Predicates.not(Utils.HAS_REQUEST_INJECTION))),
           "Constructor '%s/%s' has some invalid parameter(s) which is not annotated with '%s' or annotated with it more than once.",
           tConstructor.getDeclaringClass().getCanonicalName(),
           tConstructor.getParameterAnnotations().length,
@@ -112,11 +118,16 @@ public interface Injector {
         if (owner instanceof Field) {
           Field f = (Field) owner;
           if (f.getDeclaringClass().isInstance(target)) {
+            boolean accessible = f.isAccessible();
+            f.setAccessible(true);
             try {
               f.set(target, getInstanceFor(eachInjectionPoint, context));
             } catch (IllegalAccessException e) {
               throw Throwables.propagate(e);
+            } finally {
+              f.setAccessible(accessible);
             }
+
           }
         }
       }
@@ -146,7 +157,7 @@ public interface Injector {
 
   enum Utils {
     ;
-    static final Predicate<Annotation[]> HAS_ONLY_ONE_REQUEST_INJECTION = new Predicate<Annotation[]>() {
+    static final Predicate<Annotation[]> HAS_REQUEST_INJECTION = new Predicate<Annotation[]>() {
       private Predicate<Annotation> isRequestInjection = new Predicate<Annotation>() {
         @Override
         public boolean apply(Annotation annotation) {
@@ -161,21 +172,30 @@ public interface Injector {
                 asList(annotations),
                 isRequestInjection
             )
-        ) == 1;
+        ) > 0;
       }
     };
 
-    static <T> Iterable<Field> getTargetFieldsFromClass(Class<T> targetClass) {
+    public static Iterable<Field> getTargetFieldsFromClass(Class<?> targetClass) {
       return filter(
-          asList(targetClass.getFields()),
+          getAllFields(checkNotNull(targetClass)),
           new Predicate<Field>() {
             @Override
             public boolean apply(Field field) {
-              return HAS_ONLY_ONE_REQUEST_INJECTION.apply(field.getAnnotations());
+              return HAS_REQUEST_INJECTION.apply(field.getAnnotations());
             }
           }
       );
     }
 
+
+    /**
+     * Returns all the fields in {@code targetClass} defined directly in it and its super-classes.
+     */
+    public static Iterable<Field> getAllFields(Class<?> targetClass) {
+      if (targetClass == null)
+        return Collections.emptyList();
+      return Iterables.concat(getAllFields(targetClass.getSuperclass()), asList(targetClass.getDeclaredFields()));
+    }
   }
 }
