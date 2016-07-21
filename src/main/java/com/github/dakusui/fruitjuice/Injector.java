@@ -1,15 +1,16 @@
 package com.github.dakusui.fruitjuice;
 
-import com.google.common.base.*;
+import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collections;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.Iterables.*;
 import static java.lang.String.format;
@@ -17,18 +18,34 @@ import static java.util.Arrays.asList;
 
 /**
  * The injector of the FruitJuice framework.
- *
  */
 public interface Injector {
+  /**
+   * Returns the appropriate instance for the given injection type, {@code targetClass}.
+   *
+   * @param <T>         A class of the returned object.
+   * @param targetClass A class from which returned object is created.
+   */
   <T> T getInstance(Class<T> targetClass);
 
+  /**
+   * A simple implementation of {@link Injector} interface.
+   */
   class Impl implements Injector {
     private final Context.Builder builder;
 
-    Impl(Context.Builder builder) {
+    /**
+     * Creates an object of this class.
+     *
+     * @param builder A builder object of {@link Context.Builder}.
+     */
+    public Impl(Context.Builder builder) {
       this.builder = Preconditions.checkNotNull(builder);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public <T> T getInstance(Class<T> targetClass) {
       Preconditions.checkNotNull(targetClass);
@@ -52,7 +69,7 @@ public interface Injector {
                     new Predicate<InjectionPoint>() {
                       @Override
                       public boolean apply(InjectionPoint injectionPoint) {
-                        return constructor.equals(injectionPoint.getOwner());
+                        return constructor.equals(injectionPoint.getTargetElement().asConstructorParameter().getDeclaringConstructor());
                       }
                     }
                 ),
@@ -79,12 +96,12 @@ public interface Injector {
           new Predicate<Constructor<T>>() {
             @Override
             public boolean apply(Constructor<T> constructor) {
-              return constructor.isAnnotationPresent(UseForInjection.class);
+              return constructor.isAnnotationPresent(Inject.class);
             }
           }
       );
       if (size(constructors) == 1) {
-        return makeSureAllParametersRequestInjection(Iterables.get(constructors, 0));
+        return Iterables.get(constructors, 0);
       }
       if (size(constructors) == 0) {
         try {
@@ -95,28 +112,16 @@ public interface Injector {
       }
       throw new RuntimeException(format(
           "More than one constructors annotated with '%s' are found in '%s'",
-          UseForInjection.class.getSimpleName(),
+          Inject.class.getSimpleName(),
           targetClass.getCanonicalName()
       ));
     }
 
-    private <T> Constructor<T> makeSureAllParametersRequestInjection(Constructor<T> tConstructor) {
-      checkArgument(isEmpty(filter(
-          asList(tConstructor.getParameterAnnotations()),
-          Predicates.not(Utils.HAS_REQUEST_INJECTION))),
-          "Constructor '%s/%s' has some invalid parameter(s) which is not annotated with '%s' or annotated with it more than once.",
-          tConstructor.getDeclaringClass().getCanonicalName(),
-          tConstructor.getParameterAnnotations().length,
-          RequestInjection.class.getCanonicalName()
-      );
-      return tConstructor;
-    }
-
     private <T> void injectFields(Context context, T target, Iterable<InjectionPoint> injectionPoints) {
       for (InjectionPoint eachInjectionPoint : injectionPoints) {
-        Object owner = eachInjectionPoint.getOwner();
-        if (owner instanceof Field) {
-          Field f = (Field) owner;
+        InjectionPoint.TargetElement eachTargetElement = eachInjectionPoint.getTargetElement();
+        if (InjectionPoint.Type.FIELD.equals(eachInjectionPoint.getType())) {
+          Field f = eachTargetElement.asField();
           if (f.getDeclaringClass().isInstance(target)) {
             boolean accessible = f.isAccessible();
             f.setAccessible(true);
@@ -155,34 +160,25 @@ public interface Injector {
 
   }
 
+  /**
+   * A utility class for {@code Injector} mechanism.
+   */
   enum Utils {
     ;
-    static final Predicate<Annotation[]> HAS_REQUEST_INJECTION = new Predicate<Annotation[]>() {
-      private Predicate<Annotation> isRequestInjection = new Predicate<Annotation>() {
-        @Override
-        public boolean apply(Annotation annotation) {
-          return annotation.annotationType().isAnnotationPresent(RequestInjection.class);
-        }
-      };
 
-      @Override
-      public boolean apply(Annotation[] annotations) {
-        return size(
-            filter(
-                asList(annotations),
-                isRequestInjection
-            )
-        ) > 0;
-      }
-    };
-
+    /**
+     * Returns all the "target" fields in {@code targetClass}, which are annotated
+     * with {@link Inject}.
+     *
+     * @param targetClass A class from which returned fields are collected.
+     */
     public static Iterable<Field> getTargetFieldsFromClass(Class<?> targetClass) {
       return filter(
           getAllFields(checkNotNull(targetClass)),
           new Predicate<Field>() {
             @Override
             public boolean apply(Field field) {
-              return HAS_REQUEST_INJECTION.apply(field.getAnnotations());
+              return field.isAnnotationPresent(Inject.class);
             }
           }
       );
@@ -190,7 +186,10 @@ public interface Injector {
 
 
     /**
-     * Returns all the fields in {@code targetClass} defined directly in it and its super-classes.
+     * Returns all the fields in {@code targetClass} defined directly in it and its
+     * all the super-classes.
+     *
+     * @param targetClass A class from which returned fields are collected.
      */
     public static Iterable<Field> getAllFields(Class<?> targetClass) {
       if (targetClass == null)

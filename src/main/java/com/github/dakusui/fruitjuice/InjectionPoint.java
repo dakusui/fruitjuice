@@ -21,7 +21,29 @@ public interface InjectionPoint {
   /**
    * Returns an owner from which this object is created.
    */
-  Object getOwner();
+  TargetElement getTargetElement();
+
+  Type getType();
+
+  enum Type {
+    CONSTRUCTOR_PARAMETER,
+    FIELD;
+  }
+
+  interface TargetElement {
+    ConstructorParameter asConstructorParameter();
+
+    Field asField();
+  }
+
+  interface ConstructorParameter {
+    Class<?> getType();
+
+    Constructor getDeclaringConstructor();
+
+    int getModifiers();
+  }
+
 
   /**
    * A factory class that creates {@code InjectionPoint} objects.
@@ -40,8 +62,23 @@ public interface InjectionPoint {
         }
 
         @Override
-        public Object getOwner() {
-          return targetField;
+        public TargetElement getTargetElement() {
+          return new TargetElement() {
+            @Override
+            public ConstructorParameter asConstructorParameter() {
+              throw new UnsupportedOperationException("The target of this object is a field and not a constructor parameter");
+            }
+
+            @Override
+            public Field asField() {
+              return targetField;
+            }
+          };
+        }
+
+        @Override
+        public Type getType() {
+          return Type.FIELD;
         }
       };
     }
@@ -62,8 +99,38 @@ public interface InjectionPoint {
             }
 
             @Override
-            public Object getOwner() {
-              return targetConstructor;
+            public TargetElement getTargetElement() {
+              return new TargetElement() {
+                @Override
+                public ConstructorParameter asConstructorParameter() {
+                  return new ConstructorParameter() {
+                    @Override
+                    public Class<?> getType() {
+                      return targetConstructor.getParameterTypes()[index];
+                    }
+
+                    @Override
+                    public Constructor getDeclaringConstructor() {
+                      return targetConstructor;
+                    }
+
+                    @Override
+                    public int getModifiers() {
+                      return targetConstructor.getModifiers();
+                    }
+                  };
+                }
+
+                @Override
+                public Field asField() {
+                  throw new UnsupportedOperationException("The target of this object is a field and not a constructor parameter");
+                }
+              };
+            }
+
+            @Override
+            public Type getType() {
+              return Type.CONSTRUCTOR_PARAMETER;
             }
 
           };

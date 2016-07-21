@@ -1,9 +1,10 @@
 package com.github.dakusui.fixture;
 
-import com.github.dakusui.fruitjuice.UseForInjection;
+import com.github.dakusui.fruitjuice.Inject;
 
 public class ExampleFixture implements Fixture {
   public static class NestedFixture implements Fixture {
+    @Inject
     @InjectComponent(
         type = "NGINX",
         config = {}
@@ -15,15 +16,18 @@ public class ExampleFixture implements Fixture {
     }
   }
 
+  @Inject
   @InjectFixture
   Fixture nestedFixture;
 
+  @Inject
   @InjectComponent(
       type = "ADMIN",
       config = {@Value(name="adminSlot", value = "testenv101:0")}
   )
   private Component admin;
 
+  @Inject
   @InjectSubsystem(
       type = "CASSANDRA",
       config = {},
@@ -32,10 +36,12 @@ public class ExampleFixture implements Fixture {
   )
   public Subsystem subsystem;
 
-  @UseForInjection
+  @Inject
   public ExampleFixture(
-      @InjectComponent(type = "DATALOADER", config = {}) Component dataloader
+      @InjectComponent(type = "DATALOADER", config = {}) Component dataloader,
+      String msg
   ) {
+    System.out.println(msg);
     System.out.println(dataloader);
   }
 

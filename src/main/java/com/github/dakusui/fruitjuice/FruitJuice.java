@@ -1,31 +1,32 @@
 package com.github.dakusui.fruitjuice;
 
 /**
- * The entry point to the FruitJuice framework.
- * <code>
- * FruitJuice.createInjector(new Context.Builder() {
- *   Map<InjectionRequest, Object> registry = new HashMap<>();
+ * The entry point to the FruitJuice framework. Creates {@link Injector}s from
+ * {@link com.github.dakusui.fruitjuice.Context.Builder}.
  *
- *   {@literal @}Override
- *   public Context.Builder add(InjectionPoint injectionPoint) {
- *     registry.put(
- *       injectionPoint.getRequest(),
- *       injectionPoint.getValueFactory().create(injectionPoint.getRequest())
- *     );
- *     return this;
- *   }
- *
- *   {@literal @}Override
- *   public Context build() {
- *     return new Context() {
- *       {@literal @}Override
- *       public <V> V lookup(InjectionRequest request) {
- *         return (V) registry.get(request);
+ * Following is a code example of FruitJuice.
+ * <pre>
+ *     public class FooApplication {
+ *       public static void main(String[] args) {
+ *         Injector injector = FruitJuice.createInjector(
+ *             new Context.Builder.Base() {
+ *               protected Object create(InjectionRequest request) {
+ *                 ...
+ *               }
+ *             }
+ *         );
+ *         // Now just bootstrap the application and you're done
+ *         FooStarter starter = injector.getInstance(FooStarter.class);
+ *         starter.runApplication();
  *       }
- *    };
- *   }
- * }).getInstance(fixtureClass);
- * </code>
+ *     }
+ * </pre>
+ *
+ * @see InjectionPoint
+ * @see InjectionRequest
+ * @see Context
+ * @see Context.Builder
+ * @see Context.Builder.Base
  */
 public enum FruitJuice {
   ;

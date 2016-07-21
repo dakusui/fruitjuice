@@ -13,6 +13,8 @@ import java.util.Map;
 public interface Context {
   /**
    * Returns a requested object that matches given {@code request}.
+   * The returned object will be injected to the injection points to which the
+   * {@code request} object belongs.
    */
   <T> T lookup(InjectionRequest request);
 
@@ -24,7 +26,8 @@ public interface Context {
    */
   interface Builder {
     /**
-     * Generally called by FruitJuice's framework
+     * Adds given {@code injectionPoint} to this object.
+     * Generally called by FruitJuice's framework.
      */
     Builder add(InjectionPoint injectionPoint);
 
@@ -33,9 +36,15 @@ public interface Context {
      */
     Context build();
 
+    /**
+     * A generic base class of {@link Builder}.
+     */
     abstract class Base implements Builder {
-      Map<InjectionRequest, Object> registry = new HashMap<>();
+      private Map<InjectionRequest, Object> registry = new HashMap<>();
 
+      /**
+       * {@inheritDoc}
+       */
       @Override
       public Context.Builder add(InjectionPoint injectionPoint) {
         registry.put(
@@ -45,6 +54,16 @@ public interface Context {
         return this;
       }
 
+      /**
+       * {@inheritDoc}
+       * <p>
+       * The implementation of {@code Context} returned by this method gives the object
+       * created by the method call to {@code Context.Builder#add} with {@code request}
+       * object held by {@code InjectionPoint} equal to the one given to {@code Context#lookup}
+       * method.
+       *
+       * @see InjectionRequest#equals(Object)
+       */
       @Override
       public Context build() {
         return new Context() {
@@ -56,6 +75,12 @@ public interface Context {
         };
       }
 
+      /**
+       * Creates and returns a value to be injected the injection points which are
+       * equal to given {@code request}.
+       *
+       * @param request A request for which the returned value should be created.
+       */
       protected abstract Object create(InjectionRequest request);
     }
   }

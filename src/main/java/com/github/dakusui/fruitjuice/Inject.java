@@ -13,7 +13,7 @@ import java.lang.annotation.Target;
  * If no constructor is annotated with this annotation, A public constructor with
  * no parameter will be used for dependency injection.
  */
-@Target(ElementType.CONSTRUCTOR)
+@Target({ElementType.CONSTRUCTOR, ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface UseForInjection {
+public @interface Inject {
 }
