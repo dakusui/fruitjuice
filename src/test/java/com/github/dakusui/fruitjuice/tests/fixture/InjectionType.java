@@ -1,4 +1,4 @@
-package com.github.dakusui.fixture;
+package com.github.dakusui.example.fixture;
 
 import com.github.dakusui.fruitjuice.Context;
 import com.github.dakusui.fruitjuice.FruitJuice;

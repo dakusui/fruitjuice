@@ -1,4 +1,4 @@
-package com.github.dakusui.fixture;
+package com.github.dakusui.example.fixture;
 
 import com.github.dakusui.fruitjuice.Context;
 import com.github.dakusui.fruitjuice.FruitJuice;
@@ -10,12 +10,12 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.lang.String.format;
 
-interface Fixture {
+public interface Fixture {
 
   @interface Value {
     String name();
+
     String value();
   }
 
@@ -47,7 +47,7 @@ interface Fixture {
   enum Factory {
     ;
 
-    static <T extends Fixture> T create(Class<T> fixtureClass) {
+    public static <T extends Fixture> T create(Class<T> fixtureClass) {
       return FruitJuice.createInjector(
           new Context.Builder.Base() {
             @Override
