@@ -1,7 +1,9 @@
 package com.github.dakusui.fruitjuice.examples.executorservice;
 
-/**
- * Created by hiroshi on 7/22/16.
- */
-public class MultiThreaded {
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
+@Retention(RetentionPolicy.RUNTIME)
+public @interface MultiThreaded {
+  int poolSize() default 2;
 }

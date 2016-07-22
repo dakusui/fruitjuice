@@ -1,4 +1,4 @@
-package com.github.dakusui.example.fixture;
+package com.github.dakusui.fruitjuice.tests.fixture;
 
 import com.google.common.base.Preconditions;
 

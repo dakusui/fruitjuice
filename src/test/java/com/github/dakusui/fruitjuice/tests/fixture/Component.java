@@ -1,9 +1,9 @@
-package com.github.dakusui.example.fixture;
+package com.github.dakusui.fruitjuice.tests.fixture;
 
 import com.github.dakusui.fruitjuice.InjectionRequest;
 
-import static com.github.dakusui.example.fixture.Utils.createAttributeBundleFromInjectionRequest;
-import static com.github.dakusui.example.fixture.Utils.formatValues;
+import static com.github.dakusui.fruitjuice.tests.fixture.Utils.createAttributeBundleFromInjectionRequest;
+import static com.github.dakusui.fruitjuice.tests.fixture.Utils.formatValues;
 
 public interface Component {
   enum Factory {

@@ -1,16 +1,18 @@
 package com.github.dakusui.fruitjuice;
 
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
+import com.google.common.base.*;
 import com.google.common.collect.Iterables;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.Iterables.*;
 import static java.lang.String.format;
@@ -51,7 +53,7 @@ public interface Injector {
       Preconditions.checkNotNull(targetClass);
       Constructor<T> constructor = getAppropriateConstructorFrom(targetClass);
       Iterable<InjectionPoint> constructorInjectionPoints = getConstructorInjectionPoints(constructor);
-      Iterable<InjectionPoint> fieldInjectionPoints = getFieldInjectionPoints(targetClass);
+      Iterable<InjectionPoint> fieldInjectionPoints = validateFieldInjectionPoints(targetClass, getFieldInjectionPoints(targetClass));
       for (InjectionPoint each : Iterables.concat(constructorInjectionPoints, fieldInjectionPoints)) {
         this.builder.add(each);
       }
@@ -62,8 +64,12 @@ public interface Injector {
     }
 
     private <T> T createObject(final Context context, final Constructor<T> constructor, Iterable<InjectionPoint> constructorInjectionPoints) {
+      Object[] args = null;
       try {
-        return constructor.newInstance(toArray(
+        ////
+        //Actually used in catch clause.
+        //noinspection UnusedAssignment
+        return constructor.newInstance(args = toArray(
             transform(
                 filter(constructorInjectionPoints,
                     new Predicate<InjectionPoint>() {
@@ -78,13 +84,21 @@ public interface Injector {
                   public Object apply(InjectionPoint injectionPoint) {
                     return getInstanceFor(injectionPoint, context);
                   }
-                }
-            ),
+                }),
             Object.class
-            )
-        );
-      } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+        ));
+      } catch (IllegalArgumentException e) {
+        throw new IllegalArgumentException(
+            format("Failed to create %s object. (<<init>>/%s(%s)): %s",
+                constructor.getDeclaringClass().getSimpleName(),
+                constructor.getParameterTypes().length,
+                Arrays.toString(args),
+                e.getMessage()),
+            e);
+      } catch (InstantiationException | IllegalAccessException e) {
         throw Throwables.propagate(e);
+      } catch (InvocationTargetException e) {
+        throw Throwables.propagate(e.getTargetException());
       }
     }
 
@@ -107,11 +121,11 @@ public interface Injector {
         try {
           return targetClass.getConstructor();
         } catch (NoSuchMethodException e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(format("No available constructor for injection is found in '%s'", targetClass.getCanonicalName()), e);
         }
       }
       throw new RuntimeException(format(
-          "More than one constructors annotated with '%s' are found in '%s'",
+          "More than one constructors annotated with '@%s' are found in '%s'",
           Inject.class.getSimpleName(),
           targetClass.getCanonicalName()
       ));
@@ -120,7 +134,7 @@ public interface Injector {
     private <T> void injectFields(Context context, T target, Iterable<InjectionPoint> injectionPoints) {
       for (InjectionPoint eachInjectionPoint : injectionPoints) {
         InjectionPoint.TargetElement eachTargetElement = eachInjectionPoint.getTargetElement();
-        if (InjectionPoint.Type.FIELD.equals(eachInjectionPoint.getType())) {
+        if (InjectionPoint.Type.FIELD.equals(eachInjectionPoint.getTargetElement().getType())) {
           Field f = eachTargetElement.asField();
           if (f.getDeclaringClass().isInstance(target)) {
             boolean accessible = f.isAccessible();
@@ -128,11 +142,12 @@ public interface Injector {
             try {
               f.set(target, getInstanceFor(eachInjectionPoint, context));
             } catch (IllegalAccessException e) {
+              ////
+              // This path cannot be tested because the field is set accessible beforehand.
               throw Throwables.propagate(e);
             } finally {
               f.setAccessible(accessible);
             }
-
           }
         }
       }
@@ -154,6 +169,42 @@ public interface Injector {
       );
     }
 
+    private Iterable<InjectionPoint> validateFieldInjectionPoints(Class<?> targetClass, Iterable<InjectionPoint> fieldInjectionPoints) {
+      Iterable<String> errors =
+          transform(
+              filter(
+                  transform(
+                      fieldInjectionPoints,
+                      new Function<InjectionPoint, Iterable<String>>() {
+                        @Override
+                        public Iterable<String> apply(InjectionPoint input) {
+                          Field targetField = input.getTargetElement().asField();
+                          List<String> errors = new ArrayList<>(2);
+                          if (Modifier.isFinal(targetField.getModifiers())) {
+                            errors.add(format("Field '%s' is marked final.", targetField.getName()));
+                          }
+                          if (Modifier.isStatic(targetField.getModifiers())) {
+                            errors.add(format("Field '%s' is marked static.", targetField.getName()));
+                          }
+                          return errors.isEmpty()
+                              ? null
+                              : errors;
+                        }
+                      }
+                  ),
+                  Predicates.<Iterable<String>>notNull()
+              ),
+              new Function<Iterable<String>, String>() {
+                @Override
+                public String apply(Iterable<String> input) {
+                  return Utils.join(",", input);
+                }
+              }
+          );
+      checkArgument(Iterables.isEmpty(errors), "Following error(s) are found in class '%s': %s", targetClass.getCanonicalName(), errors);
+      return fieldInjectionPoints;
+    }
+
     private <T> Iterable<InjectionPoint> getConstructorInjectionPoints(final Constructor<T> targetConstructor) {
       return InjectionPoint.Factory.createInjectionPointsFromConstructor(targetConstructor);
     }
@@ -165,6 +216,21 @@ public interface Injector {
    */
   enum Utils {
     ;
+
+    private static String join(String s, Iterable<String> input) {
+      StringBuilder b = null;
+      for (String each : input) {
+        if (b == null) {
+          b = new StringBuilder(each);
+        } else {
+          b.append(s);
+          b.append(each);
+        }
+      }
+      return b == null
+          ? ""
+          : b.toString();
+    }
 
     /**
      * Returns all the "target" fields in {@code targetClass}, which are annotated

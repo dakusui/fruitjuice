@@ -1,7 +1,9 @@
 package com.github.dakusui.fruitjuice.examples.calc;
 
-/**
- * Created by hiroshi on 7/22/16.
- */
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
+@Retention(RetentionPolicy.RUNTIME)
 public @interface Add {
+  int[] value() default {};
 }

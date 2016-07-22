@@ -1,42 +1,25 @@
-package com.github.dakusui.example.fixture;
+package com.github.dakusui.fruitjuice.tests.fixture;
 
 import com.github.dakusui.fruitjuice.Inject;
 
 public class ExampleFixture implements Fixture {
-  private final String msg;
-  private final Component dataloader;
-
-  public Component getAdmin() {
-    return admin;
-  }
-
   public static class NestedFixture implements Fixture {
     @Inject
     @InjectComponent(
-        type = "NGINX",
+        type = "PRIAMOS",
         config = {}
     )
-    public Component nginx;
-
-    public String toString() {
-      return String.format("nginx=%s", this.nginx);
-    }
+    public Component priamos;
   }
 
   @Inject
   @InjectFixture
   Fixture nestedFixture;
 
-  @Inject
-  @InjectComponent(
-      type = "ADMIN",
-      config = {@Value(name="adminSlot", value = "testenv101:0")}
-  )
-  private Component admin;
 
   @Inject
   @InjectSubsystem(
-      type = "CASSANDRA",
+      type = "TROJAN",
       config = {@Value(name="config1", value="configvalue1")},
       dependencies = {
           @Value(name="dep1", value="depvalue1"),
@@ -47,26 +30,45 @@ public class ExampleFixture implements Fixture {
           @Value(name="child2", value="childvalue2")
       }
   )
-  public Subsystem subsystem;
+  public Subsystem trojan;
+
+  @Inject
+  @InjectComponent(
+      type = "PATROCLUS",
+      config = {@Value(name="controller", value = "hostname:80")}
+  )
+  private Component patroclus;
+
+  private final Component hector;
+
+  private final String message;
 
   @Inject
   public ExampleFixture(
-      @InjectComponent(type = "DATALOADER", config = {}) Component dataloader,
-      String msg
+      @InjectComponent(type = "HECTOR", config = {}) Component hector,
+      String message
   ) {
-    this.msg = msg;
-    this.dataloader = dataloader;
+    this.message = message;
+    this.hector = hector;
   }
 
   public NestedFixture getNestedFixture() {
     return (NestedFixture) this.nestedFixture;
   }
 
-  public Component getDataloader() {
-    return this.dataloader;
+  public Component getPatroclus() {
+    return patroclus;
+  }
+
+  public Component getHector() {
+    return this.hector;
+  }
+
+  public String getMessage() {
+    return this.message;
   }
 
   public String toString() {
-    return String.format("admin=%s; subsystem=%s; nested=[%s]", this.admin, this.subsystem, this.nestedFixture);
+    return String.format("patroclus=%s; subsystem=%s; nested=[%s]", this.patroclus, this.trojan, this.nestedFixture);
   }
 }
