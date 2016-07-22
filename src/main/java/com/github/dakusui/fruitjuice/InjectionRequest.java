@@ -9,7 +9,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 
-import static com.google.common.collect.Iterables.*;
+import static com.google.common.collect.Iterables.filter;
+import static com.google.common.collect.Iterables.isEmpty;
 import static java.lang.String.format;
 
 /**
@@ -18,12 +19,30 @@ import static java.lang.String.format;
  */
 public interface InjectionRequest {
   /**
-   * Checks if annotation of {@code annotationClass} is present.
+   * Returns true if an annotation for the specified type
+   * is <em>present</em> on this element, else false.  This method
+   * is designed primarily for convenient access to marker annotations.
+   * <p>
+   * <p>The truth value returned by this method is equivalent to:
+   * {@code getAnnotation(annotationClass) != null}
+   * <p>
+   * <p>The body of the default method is specified to be the code
+   * above.
+   *
+   * @param annotationClass the Class object corresponding to the
+   *                        annotation type
+   * @return true if an annotation for the specified annotation
+   * type is present on this element, else false
    */
   boolean isAnnotationPresent(Class<? extends Annotation> annotationClass);
 
   /**
-   * Checks an annotation object of {@code annotationClass}.
+   * Returns this element's annotation for the specified type if
+   * such an annotation is <em>present</em>, else null.
+   *
+   * @param <T>             the type of the annotation to query for and return if present
+   * @param annotationClass the Class object corresponding to the
+   *                        annotation type
    */
   <T extends Annotation> T getAnnotation(Class<T> annotationClass);
 
@@ -33,7 +52,13 @@ public interface InjectionRequest {
   Class<?> getType();
 
   /**
-   * Returns annotations
+   * Returns annotations that are <em>present</em> on this element.
+   *
+   * If there are no annotations <em>present</em> on this element, the return
+   * value is an array of length 0.
+   *
+   * The caller of this method is free to modify the returned array; it will
+   * have no effect on the arrays returned to other callers.
    */
   Iterable<Annotation> getAnnotations();
 
@@ -55,6 +80,9 @@ public interface InjectionRequest {
       this.annotations = Arrays.asList(annotations);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isAnnotationPresent(final Class<? extends Annotation> annotationClass) {
       //noinspection unchecked
@@ -66,6 +94,9 @@ public interface InjectionRequest {
       }));
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public <T extends Annotation> T getAnnotation(final Class<T> annotationClass) {
       //noinspection unchecked
@@ -80,6 +111,9 @@ public interface InjectionRequest {
           : null;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Iterable<Annotation> getAnnotations() {
       return this.annotations;
@@ -106,72 +140,57 @@ public interface InjectionRequest {
   enum Factory {
     ;
 
+    /**
+     * returns a new {@code InjectionRequest} object from a given {@code Field}.
+     *
+     * @param field A field from which {@code InjectionRequest} is created.
+     */
     static InjectionRequest createFromField(final Field field) {
       Preconditions.checkNotNull(field);
-      try {
-        return new InjectionRequest.Base(field.getAnnotations()) {
-          @Override
-          public Class<?> getType() {
-            return field.getType();
-          }
+      return new InjectionRequest.Base(field.getAnnotations()) {
+        @Override
+        public Class<?> getType() {
+          return field.getType();
+        }
 
-          @Override
-          public String toString() {
-            return format(
-                "%s:%s#%s %s",
-                getType().getSimpleName(),
-                field.getDeclaringClass().getSimpleName(),
-                field.getName(),
-                Iterables.toString(this.annotations)
-            );
-          }
-        };
-      } catch (RuntimeException e) {
-        throw new RuntimeException(composeErrorMessageWhenCreationFromFieldFail(field, e), e);
-      }
+        @Override
+        public String toString() {
+          return format(
+              "%s:%s#%s %s",
+              getType().getSimpleName(),
+              field.getDeclaringClass().getSimpleName(),
+              field.getName(),
+              Iterables.toString(this.annotations)
+          );
+        }
+      };
     }
 
-    private static String composeErrorMessageWhenCreationFromFieldFail(Field field, RuntimeException e) {
-      return format(
-          "Failed to create an injection request for field: '%s' in '%s': %s",
-          field.getName(),
-          field.getDeclaringClass().getCanonicalName(),
-          e.getMessage());
-    }
-
+    /**
+     * returns a new {@code InjectionRequest} objects from a given {@code constructor}'s
+     * parameter specified by {@code index}.
+     *
+     * @param constructor A constructor from which {@code InjectionRequest} is created.
+     * @param index An index that specify a parameter of the constructor.
+     */
     static InjectionRequest createFromConstructorParameter(final Constructor<?> constructor, final int index) {
-      try {
-        return new InjectionRequest.Base(constructor.getParameterAnnotations()[index]) {
-          @Override
-          public Class<?> getType() {
-            return constructor.getParameterTypes()[index];
-          }
+      return new InjectionRequest.Base(constructor.getParameterAnnotations()[index]) {
+        @Override
+        public Class<?> getType() {
+          return constructor.getParameterTypes()[index];
+        }
 
-          @Override
-          public String toString() {
-            return format(
-                "%s:%s#<<init>>[%s] %s",
-                getType().getSimpleName(),
-                constructor.getDeclaringClass().getSimpleName(),
-                index,
-                Iterables.toString(this.annotations)
-            );
-          }
-
-        };
-      } catch (RuntimeException e) {
-        throw new RuntimeException(composeErrorMessageWhenCreationFromConstructorParameterFail(constructor, index, e), e);
-      }
-    }
-
-    private static String composeErrorMessageWhenCreationFromConstructorParameterFail(Constructor<?> constructor, int index, RuntimeException e) {
-      return format(
-          "Failed to create an injection request for constructor (annotated with '%s') parameter %s in %s: %s",
-          Inject.class.getSimpleName(),
-          index,
-          constructor.getDeclaringClass().getCanonicalName(),
-          e.getMessage()
-      );
+        @Override
+        public String toString() {
+          return format(
+              "%s:%s#<<init>>[%s] %s",
+              getType().getSimpleName(),
+              constructor.getDeclaringClass().getSimpleName(),
+              index,
+              Iterables.toString(this.annotations)
+          );
+        }
+      };
     }
   }
 }

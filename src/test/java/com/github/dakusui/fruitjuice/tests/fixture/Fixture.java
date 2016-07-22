@@ -1,4 +1,4 @@
-package com.github.dakusui.example.fixture;
+package com.github.dakusui.fruitjuice.tests.fixture;
 
 import com.github.dakusui.fruitjuice.Context;
 import com.github.dakusui.fruitjuice.FruitJuice;
@@ -48,14 +48,13 @@ public interface Fixture {
     ;
 
     public static <T extends Fixture> T create(Class<T> fixtureClass) {
-      return FruitJuice.createInjector(
-          new Context.Builder.Base() {
-            @Override
-            protected Object create(final InjectionRequest request) {
-              checkNotNull(request);
-              return InjectionType.typeOf(request).create(this, request);
-            }
-          }).getInstance(checkNotNull(fixtureClass));
+      return FruitJuice.createInjector(new Context.Builder.Base() {
+        @Override
+        protected Object create(final InjectionRequest request) {
+          checkNotNull(request);
+          return InjectionType.typeOf(request).create(this, request);
+        }
+      }).getInstance(checkNotNull(fixtureClass));
     }
   }
 }

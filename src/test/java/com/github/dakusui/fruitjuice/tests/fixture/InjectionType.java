@@ -1,4 +1,4 @@
-package com.github.dakusui.example.fixture;
+package com.github.dakusui.fruitjuice.tests.fixture;
 
 import com.github.dakusui.fruitjuice.Context;
 import com.github.dakusui.fruitjuice.FruitJuice;
@@ -9,7 +9,7 @@ import static java.lang.String.format;
 public enum InjectionType {
   COMPONENT {
     @Override
-    Object create(Context.Builder builder, InjectionRequest request) {
+    public Object create(Context.Builder builder, InjectionRequest request) {
       return Component.Factory.create(request);
     }
 
@@ -21,7 +21,7 @@ public enum InjectionType {
   },
   SUBSYSTEM {
     @Override
-    Object create(Context.Builder builder, InjectionRequest request) {
+    public Object create(Context.Builder builder, InjectionRequest request) {
       return Subsystem.Factory.create(request);
     }
 
@@ -33,7 +33,7 @@ public enum InjectionType {
   },
   NESTED_FIXTURE {
     @Override
-    Object create(Context.Builder builder, InjectionRequest request) {
+    public Object create(Context.Builder builder, InjectionRequest request) {
       return FruitJuice.createInjector(builder).getInstance(ExampleFixture.NestedFixture.class);
     }
 
@@ -44,7 +44,7 @@ public enum InjectionType {
   },
   SYSTEM_NAME {
     @Override
-    Object create(Context.Builder builder, InjectionRequest request) {
+    public Object create(Context.Builder builder, InjectionRequest request) {
       return "HelloSystem";
     }
 
@@ -54,11 +54,11 @@ public enum InjectionType {
     }
   },;
 
-  abstract Object create(Context.Builder builder, InjectionRequest request);
+  public abstract Object create(Context.Builder builder, InjectionRequest request);
 
   abstract Attribute.Bundle createAttributeBundle(InjectionRequest request);
 
-  static InjectionType typeOf(InjectionRequest request) {
+  public static InjectionType typeOf(InjectionRequest request) {
     if (request.isAnnotationPresent(Fixture.InjectComponent.class)) {
       return COMPONENT;
     } else if (request.isAnnotationPresent(Fixture.InjectSubsystem.class)) {

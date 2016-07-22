@@ -31,6 +31,15 @@ package com.github.dakusui.fruitjuice;
 public enum FruitJuice {
   ;
 
+  /**
+   * Creates and returns a new injector.
+   * Values to be injected are determined by a {@code Context} object built by the
+   * {@code builder} given to the method.
+   *
+   * @see com.github.dakusui.fruitjuice
+   * @param builder A builder for a context.
+   *
+   */
   public static Injector createInjector(Context.Builder builder) {
     return new Injector.Impl(builder);
   }

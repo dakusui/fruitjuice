@@ -9,12 +9,17 @@ import java.util.Map;
  * field values, etc.
  *
  * @see Builder
+ * @see com.github.dakusui.fruitjuice
  */
 public interface Context {
   /**
    * Returns a requested object that matches given {@code request}.
    * The returned object will be injected to the injection points to which the
    * {@code request} object belongs.
+   *
+   * @param <T> A type of requested object.
+   * @param request A request for object to be injected.
+   *
    */
   <T> T lookup(InjectionRequest request);
 
@@ -61,8 +66,6 @@ public interface Context {
        * created by the method call to {@code Context.Builder#add} with {@code request}
        * object held by {@code InjectionPoint} equal to the one given to {@code Context#lookup}
        * method.
-       *
-       * @see InjectionRequest#equals(Object)
        */
       @Override
       public Context build() {
