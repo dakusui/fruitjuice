@@ -3,7 +3,7 @@
     <groupId>com.github.dakusui</groupId>
     <artifactId>fruitjuice</artifactId>
     <packaging>jar</packaging>
-    <version>1.0.0</version>
+    <version>1.0.1-SNAPSHOT</version>
 
     <name>fruitjuice</name>
     <url>http://maven.apache.org</url>
@@ -21,7 +21,7 @@
         <developerConnection>scm:git:git@github.com:dakusui/fruitjuice.git
         </developerConnection>
         <url>http://dakusui.github.io/fruitjuice</url>
-      <tag>fruitjuice-1.0.0</tag>
+      <tag>HEAD</tag>
   </scm>
 
     <developers>
