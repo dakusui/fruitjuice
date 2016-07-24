@@ -10,14 +10,14 @@ Following is a maven coordinate for Fruit-juice.
     <dependency>
       <groupId>com.github.dakusui</groupId>
       <artifactId>fruitjuice</artifactId>
-      <version>[1.0.0,)</version>
+      <version>[1.0.2,)</version>
     </dependency>
 ```
 
 # Usage
 ## Motivation
 In stack overflow, one question was asked for a while ago. 
-"Does anyone out there know how I can access the value of the 'poolSize' parameter from a Guice Provider?"[1]
+"Does anyone out there know how I can access the value of the 'poolSize' parameter from a Guice Provider?"[[1]]
 
 ```java
 
@@ -32,7 +32,7 @@ In stack overflow, one question was asked for a while ago.
     }
 ```
 
-To me it looked a quite frequent use case, but the answers are like "You should use CustomInjection"[2],
+To me it looked a quite frequent use case, but the answers are like "You should use CustomInjection"[[2]],
 "You can mimic how @Named does similar thing", or "You can't. That's not how binding annotations are intended to be used."
 
 Maybe this is not a right way to use 'dependency injection', but still I want to 
@@ -84,8 +84,8 @@ The solution to the question mentioned in the previous section would be like fol
 
 ```
 
-Please refer to API reference[0], which contains explanation about internal mechanism of
-the Fruit-juice framework.
+Please refer to API reference[[0]], which explains external specification and 
+design of the Fruit-juice framework.
 
 # References
 * [0] "API reference"
