@@ -1,6 +1,9 @@
 # Fruit-juice
 A java dependency injection library simpler than Guice.
 
+[![Build Status](https://travis-ci.org/dakusui/fruitjuice.svg?branch=master)](https://travis-ci.org/dakusui/fruitjuice)
+[![codecov.io](https://codecov.io/github/dakusui/fruitjuice/coverage.svg?branch=master)](https://codecov.io/github/dakusui/fruitjuice?branch=master)
+
 # Installation
 Fruit-juice requires Java SE7 or later.
 Following is a maven coordinate for Fruit-juice.
